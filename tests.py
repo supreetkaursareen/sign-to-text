@@ -1,0 +1,76 @@
+import cv2
+from cvzone.HandTrackingModule import HandDetector
+from cvzone.ClassificationModule import Classifier
+import numpy as np
+import math
+import os
+
+cap = cv2.VideoCapture(0)
+detector = HandDetector(maxHands=2)
+classifier = Classifier("model/keras_model.h5", "model/labels.txt")
+offset = 20
+img_size = 300
+folder = "images/good"
+counter = 0
+labels = ["beautiful", "0", "1"]
+
+# Create the folder if it doesn't exist
+
+while True:
+    success, img = cap.read()
+    img_output = img.copy()
+    hands, img = detector.findHands(img)
+
+    if hands:
+        hand = hands[0]
+        x, y, w, h = hand['bbox']
+
+        crop_x = max(x - offset, 0)
+        crop_y = max(y - offset, 0)
+        crop_w = min(x + w + offset, img.shape[1]) - crop_x
+        crop_h = min(y + h + offset, img.shape[0]) - crop_y
+
+        img_white = np.ones((img_size, img_size, 3), np.uint8) * 255
+        img_crop = img[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w]
+
+        aspect_ratio = h / w
+        if aspect_ratio > 1:
+            k = img_size / h
+            w_cal = math.ceil(k * w)
+            img_resize = cv2.resize(img_crop, (w_cal, img_size))
+            w_gap = math.ceil((img_size - w_cal) / 2)
+            img_white[:, w_gap:w_cal + w_gap] = img_resize
+            prediction, index = classifier.getPrediction(img)
+
+        else:
+            k = img_size / w
+            h_cal = math.ceil(k * w)
+            img_resize = cv2.resize(img_crop, (img_size, h_cal))
+            h_gap = math.ceil((img_size - h_cal) / 2)
+            img_white[h_gap:h_cal + h_gap, :] = img_resize
+            prediction, index = classifier.getPrediction(img)
+
+        # Assuming labels[index] contains multiple recognized words
+        recognized_text = labels[index]
+
+        # Convert the recognized text to sign language representation
+        # Replace this with code that maps words to sign language images
+        sign_images = []
+
+        for word in recognized_text:
+            # Replace this with code that maps words to sign language images
+            # You'll need a dataset or a way to generate sign language images
+            pass
+
+        # Display the sign language images in sequence
+        for sign_image in sign_images:
+            # Display sign_image in img_output
+            # You can use cv2.imshow or another library to show the sign language signs
+            pass
+
+        print(f"Recognized Text: {recognized_text}")
+
+        cv2.imshow("image_white", img_white)
+
+    cv2.imshow("image", img_output)
+    cv2.waitKey(1)
